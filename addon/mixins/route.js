@@ -16,6 +16,14 @@ export default Ember.Mixin.create({
 
   /**
     @private
+    @property _store
+    @type String
+    @default store
+  */
+  _store: 'store',
+
+  /**
+    @private
     @property _perPage
     @type Integer
     @default 25
@@ -125,16 +133,9 @@ export default Ember.Mixin.create({
     @return {Ember.RSVP.Promise}
   */
   infinityModel(modelName, options, boundParams) {
-
-    if (Ember.isEmpty(get(this, 'store')) || Ember.isEmpty(get(this, 'store').find)){
-      throw new Ember.Error("Ember Data store is not available to infinityModel");
-    } else if (modelName === undefined) {
-      throw new Ember.Error("You must pass a Model Name to infinityModel");
-    }
-
-    this.set('_infinityModelName', modelName);
-
     options = options ? Ember.merge({}, options) : {};
+
+    var store        = options.store || this.get('_store');
     var startingPage = options.startingPage || 1;
     var perPage      = options.perPage || this.get('_perPage');
     var modelPath    = options.modelPath || this.get('_modelPath');
@@ -142,10 +143,20 @@ export default Ember.Mixin.create({
     delete options.startingPage;
     delete options.perPage;
     delete options.modelPath;
+    delete options.store;
 
     this.set('_perPage', perPage);
     this.set('_modelPath', modelPath);
     this.set('_extraParams', options);
+    this.set('_store', store);
+
+    if (Ember.isEmpty(get(this, store)) || Ember.isEmpty(get(this, store).find)){
+      throw new Ember.Error("Ember Data store is not available to infinityModel");
+    } else if (modelName === undefined) {
+      throw new Ember.Error("You must pass a Model Name to infinityModel");
+    }
+
+    this.set('_infinityModelName', modelName);
 
     var requestPayloadBase = {};
     requestPayloadBase[this.get('perPageParam')] = perPage;
@@ -157,7 +168,7 @@ export default Ember.Mixin.create({
     }
 
     var params = Ember.merge(requestPayloadBase, options);
-    var promise = get(this, 'store').find(modelName, params);
+    var promise = get(this, 'spree.store').find(modelName, params);
 
     promise.then(
       infinityModel => {
@@ -203,7 +214,7 @@ export default Ember.Mixin.create({
       options = this._includeBoundParams(options, boundParams);
 
       var params = Ember.merge(requestPayloadBase, options);
-      var promise = get(this, 'store').find(modelName, params);
+      var promise = get(this, this.get('_store')).find(modelName, params);
 
       promise.then(
         newObjects => {
